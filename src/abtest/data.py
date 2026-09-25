@@ -12,6 +12,8 @@ import urllib.request
 import zipfile
 from dataclasses import dataclass
 from pathlib import Path
+import ssl
+import urllib.error
 
 import numpy as np
 import pandas as pd
@@ -28,9 +30,24 @@ def download_raw(raw_dir: str | Path = "data/raw") -> Path:
     xlsx_path = raw_dir / RAW_XLSX_NAME
     if xlsx_path.exists():
         return xlsx_path
+
     print(f"Downloading dataset from {UCI_ZIP_URL} ...")
-    with urllib.request.urlopen(UCI_ZIP_URL) as resp:
-        payload = resp.read()
+    try:
+        import certifi
+        ctx = ssl.create_default_context(cafile=certifi.where())
+    except ImportError:
+        ctx = ssl.create_default_context()
+
+    try:
+        with urllib.request.urlopen(UCI_ZIP_URL, context=ctx, timeout=120) as resp:
+            payload = resp.read()
+    except urllib.error.URLError as e:
+        raise SystemExit(
+            f"Could not download the dataset ({e.reason}).\n"
+            f"Download it manually from https://archive.ics.uci.edu/dataset/352/online+retail,\n"
+            f"unzip it, and place '{RAW_XLSX_NAME}' in: {raw_dir.resolve()}"
+        ) from None
+
     with zipfile.ZipFile(io.BytesIO(payload)) as zf:
         zf.extract(RAW_XLSX_NAME, raw_dir)
     return xlsx_path

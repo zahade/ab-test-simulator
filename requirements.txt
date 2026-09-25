@@ -7,3 +7,4 @@ openpyxl>=3.1
 pyarrow>=14
 jupyter>=1.0
 pytest>=7
+certifi
